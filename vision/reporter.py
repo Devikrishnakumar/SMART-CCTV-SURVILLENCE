@@ -20,7 +20,7 @@ import logging
 log = logging.getLogger("vision.reporter")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
-INCIDENT_TYPES = ["accident", "violence", "fallen_person"]
+INCIDENT_TYPES = ["accident", "violence", "fallen_person", "fire"]
 
 
 async def send_report(api: str, camera_id: str, incident_type: str, confidence: float):

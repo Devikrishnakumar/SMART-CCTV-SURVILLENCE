@@ -37,11 +37,17 @@ async def ai_report(
         )
 
     incident_data = IncidentCreate(
+        event_id=payload.event_id,
         type=payload.type,
         confidence=payload.confidence,
+        peak_confidence=payload.peak_confidence,
         camera_id=payload.camera_id,
         snapshot_url=payload.snapshot_url,
         video_clip_url=payload.video_clip_url,
+        evidence_frames=payload.frames,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        timestamp=payload.timestamp,
     )
 
     try:

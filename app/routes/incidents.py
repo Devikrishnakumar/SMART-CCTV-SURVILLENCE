@@ -6,11 +6,11 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import Incident, IncidentStatus, User
 from app.schemas import (
-    IncidentCreate, IncidentOut, IncidentVerify, IncidentDispatch, IncidentResolve
+    IncidentCreate, IncidentOut, IncidentVerify, IncidentDispatch, IncidentResolve, IncidentReject
 )
 from app.auth.dependencies import require_operator, require_dispatcher, get_current_user
 from app.services.incident import (
-    create_incident, verify_incident, dispatch_incident, resolve_incident, get_incident_or_404
+    create_incident, verify_incident, reject_incident, dispatch_incident, resolve_incident, get_incident_or_404
 )
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -62,6 +62,16 @@ async def verify(
     current_user: User = Depends(require_operator),
 ):
     return await verify_incident(db, incident_id, payload, current_user)
+
+
+@router.put("/{incident_id}/reject", response_model=IncidentOut)
+async def reject(
+    incident_id: str,
+    payload: IncidentReject = IncidentReject(),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_operator),
+):
+    return await reject_incident(db, incident_id, payload, current_user)
 
 
 @router.put("/{incident_id}/dispatch", response_model=IncidentOut)

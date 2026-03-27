@@ -202,6 +202,7 @@ select.ui-select:focus{border-color:var(--blue);}
 .type-badge.accident{color:var(--amber);border-color:var(--amber-dim);background:rgba(255,170,0,.1);}
 .type-badge.violence{color:var(--red);border-color:var(--red-dim);background:rgba(255,51,51,.1);}
 .type-badge.fallen_person{color:var(--green);border-color:var(--green-dim);background:rgba(0,255,136,.08);}
+.type-badge.fire{color:var(--red);border-color:var(--red-dim);background:rgba(255,51,51,.12);}
 
 .status-badge{
   font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
@@ -209,9 +210,9 @@ select.ui-select:focus{border-color:var(--blue);}
 }
 .status-badge.pending{color:var(--amber);border-color:var(--amber-dim);background:rgba(255,170,0,.07);}
 .status-badge.verified{color:var(--blue);border-color:var(--blue-dim);background:rgba(0,170,255,.07);}
+.status-badge.closed{color:var(--red);border-color:var(--red-dim);background:rgba(255,51,51,.08);}
 .status-badge.dispatched{color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.05);}
 .status-badge.resolved{color:var(--green);border-color:var(--green-dim);background:rgba(0,255,136,.07);}
-.status-badge.closed{color:var(--text-dim);border-color:var(--border);background:transparent;}
 
 .role-badge{
   font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
@@ -235,6 +236,7 @@ select.ui-select:focus{border-color:var(--blue);}
 .cam-card{
   background:var(--surface);border:1px solid var(--border);
   padding:16px;position:relative;overflow:hidden;
+  cursor:pointer;
 }
 .cam-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .cam-card.active::before{background:var(--green);}
@@ -243,6 +245,15 @@ select.ui-select:focus{border-color:var(--blue);}
 .cam-name{font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:1px;color:var(--text-bright);margin-bottom:4px;}
 .cam-loc{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-bottom:8px;}
 .cam-coords{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;}
+.cam-stream{font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:6px;word-break:break-all;}
+
+.live-preview{
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  border:1px solid var(--border2);
+  object-fit:cover;
+}
 
 /* ══ RIGHT PANEL ══ */
 .rpanel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -463,11 +474,11 @@ select.ui-select:focus{border-color:var(--blue);}
       <div class="toolbar">
         <select class="ui-select" id="f-status" onchange="loadIncidents()">
           <option value="">ALL STATUS</option>
-          <option value="pending">PENDING</option>
+          <option value="pending">PENDING VERIFICATION</option>
           <option value="verified">VERIFIED</option>
+          <option value="closed">REJECTED</option>
           <option value="dispatched">DISPATCHED</option>
           <option value="resolved">RESOLVED</option>
-          <option value="closed">CLOSED</option>
         </select>
         <button class="btn btn-ghost" onclick="loadIncidents()">↻ REFRESH</button>
       </div>
@@ -540,6 +551,24 @@ select.ui-select:focus{border-color:var(--blue);}
   </div>
 
   <!-- Incident detail -->
+  <div class="rp-block">
+    <div class="rp-head">Live Camera</div>
+    <div class="empty" id="cam-live-empty" style="padding:14px 0;">
+      <div class="empty-txt" style="font-size:9px;">Select a camera</div>
+    </div>
+    <div id="cam-live-content" class="hidden">
+      <img id="cam-live-img" class="live-preview" alt="Live camera feed"/>
+      <div class="df" style="margin-top:10px;">
+        <div class="df-lbl">Camera</div>
+        <div class="df-val" id="cam-live-name"></div>
+      </div>
+      <div class="df">
+        <div class="df-lbl">Stream</div>
+        <div class="df-mono" id="cam-live-stream"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="rp-block" id="rp-detail" style="max-height:260px;overflow-y:auto;">
     <div class="rp-head">Incident Detail</div>
     <div class="empty" id="rp-empty" style="padding:20px 0;"><div class="empty-icon" style="font-size:24px;">⬡</div><div class="empty-txt" style="font-size:9px;">Select incident</div></div>
@@ -565,6 +594,7 @@ select.ui-select:focus{border-color:var(--blue);}
     <div class="action-stack hidden" id="act-content">
       <!-- verify: operator+ can do this -->
       <button class="act-btn amber" id="btn-verify" onclick="doVerify()">✓ VERIFY  <small style="font-size:9px;opacity:.6;margin-left:auto">operator+</small></button>
+      <button class="act-btn" id="btn-reject" onclick="doReject()">✕ REJECT  <small style="font-size:9px;opacity:.6;margin-left:auto">operator+</small></button>
       <!-- dispatch: dispatcher+ only -->
       <div id="dispatch-block">
         <input class="unit-input" id="unit-in" placeholder="Unit ID  e.g. AMB-04"/>
@@ -611,6 +641,7 @@ select.ui-select:focus{border-color:var(--blue);}
         <option value="accident">ACCIDENT</option>
         <option value="violence">VIOLENCE</option>
         <option value="fallen_person">FALLEN PERSON</option>
+        <option value="fire">FIRE / SMOKE</option>
       </select>
     </div>
     <div class="field">
@@ -643,6 +674,10 @@ select.ui-select:focus{border-color:var(--blue);}
     <div class="g2">
       <div class="field"><label>Latitude</label><input type="number" id="c-lat" placeholder="12.9716" step="0.0001"/></div>
       <div class="field"><label>Longitude</label><input type="number" id="c-lng" placeholder="77.5946" step="0.0001"/></div>
+    </div>
+    <div class="field">
+      <label>Stream URL</label>
+      <input type="text" id="c-stream" placeholder="rtsp://user:pass@camera-ip/stream"/>
     </div>
     <div class="field">
       <label>Status</label>
@@ -688,7 +723,7 @@ let API = 'http://localhost:8000';
 let token = null, role = null, username = null;
 let ws = null, wsTimer = null;
 let incidents = [], cameras = [], sessionUsers = [];
-let selInc = null;
+let selInc = null, selCam = null;
 let alertSeeded = false;
 
 /* ══════════════════════════════════════
@@ -835,7 +870,7 @@ function renderIncidents(list) {
     if (selInc?.id===inc.id) tr.classList.add('sel');
     tr.innerHTML = `
       <td><span class="type-badge ${inc.type}">${fmtType(inc.type)}</span></td>
-      <td><span class="status-badge ${inc.status}">${inc.status.toUpperCase()}</span></td>
+      <td><span class="status-badge ${inc.status}">${fmtStatus(inc.status)}</span></td>
       <td>
         <div class="conf-wrap">
           <div class="conf-track"><div class="conf-fill ${cls}" style="width:${c*100}%"></div></div>
@@ -866,7 +901,7 @@ async function loadDetail(id) {
 
     document.getElementById('d-id').textContent = inc.id;
     document.getElementById('d-type').innerHTML = `<span class="type-badge ${inc.type}">${fmtType(inc.type)}</span>`;
-    document.getElementById('d-status').innerHTML = `<span class="status-badge ${inc.status}">${inc.status.toUpperCase()}</span>`;
+    document.getElementById('d-status').innerHTML = `<span class="status-badge ${inc.status}">${fmtStatus(inc.status)}</span>`;
     document.getElementById('d-conf').textContent = `${(inc.confidence*100).toFixed(1)}%`;
     document.getElementById('d-unit').textContent = inc.assigned_unit||'—';
     document.getElementById('d-ts').textContent = new Date(inc.timestamp).toLocaleString();
@@ -877,8 +912,9 @@ async function loadDetail(id) {
     const canDispatch = role==='dispatcher'||role==='admin';
 
     document.getElementById('btn-verify').disabled   = s!=='pending';
-    document.getElementById('unit-in').disabled      = !(s==='pending'||s==='verified') || !canDispatch;
-    document.getElementById('btn-dispatch').disabled = !(s==='pending'||s==='verified') || !canDispatch;
+    document.getElementById('btn-reject').disabled   = s!=='pending';
+    document.getElementById('unit-in').disabled      = s!=='verified' || !canDispatch;
+    document.getElementById('btn-dispatch').disabled = s!=='verified' || !canDispatch;
     document.getElementById('btn-resolve').disabled  = s!=='dispatched' || !canDispatch;
 
     // dispatch block opacity for non-dispatchers
@@ -908,10 +944,19 @@ function renderLog(logs) {
 async function doVerify() {
   if (!selInc) return;
   try {
-    await api(`/incidents/${selInc.id}/verify`,{method:'PUT',body:JSON.stringify({})});
+    await api(`/incidents/${selInc.id}/verify`,{method:'PUT',body:JSON.stringify({verification_source:'human'})});
     toast('Incident verified','success');
     loadDetail(selInc.id); loadIncidents();
   } catch(e) { toast('Verify failed: '+e.message,'error'); }
+}
+
+async function doReject() {
+  if (!selInc) return;
+  try {
+    await api(`/incidents/${selInc.id}/reject`,{method:'PUT',body:JSON.stringify({verification_source:'human'})});
+    toast('Incident rejected','warn');
+    loadDetail(selInc.id); loadIncidents();
+  } catch(e) { toast('Reject failed: '+e.message,'error'); }
 }
 
 /* dispatch: require_dispatcher (dispatcher, admin) */
@@ -946,6 +991,7 @@ async function loadCameras() {
     cameras = await api('/cameras');
     document.getElementById('s-cameras').textContent = cameras.length;
     renderCameras(cameras);
+    if (cameras.length && !selCam) setLiveCamera(cameras[0]);
     // Populate sim dropdown
     const sel = document.getElementById('sim-cam');
     sel.innerHTML = '<option value="">— select camera —</option>';
@@ -966,14 +1012,38 @@ function renderCameras(list) {
   list.forEach(c=>{
     const d = document.createElement('div');
     d.className = `cam-card ${c.status}`;
+    d.onclick = ()=>setLiveCamera(c);
     d.innerHTML = `
       <div class="cam-name">${c.name}</div>
       <div class="cam-loc">📍 ${c.location_name}</div>
-      <span class="status-badge ${c.status==='active'?'resolved':c.status==='inactive'?'pending':'verified'}">${c.status.toUpperCase()}</span>
+      <span class="status-badge ${c.status==='active'?'resolved':c.status==='inactive'?'rejected':'verified'}">${c.status.toUpperCase()}</span>
       <div class="cam-coords">${c.latitude.toFixed(4)}°, ${c.longitude.toFixed(4)}°</div>
+      <div class="cam-stream">${c.stream_url ? c.stream_url : 'No stream URL configured'}</div>
       <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:6px;">${c.id.slice(0,16)}…</div>`;
     grid.appendChild(d);
   });
+}
+
+function setLiveCamera(cam) {
+  if (!cam) return;
+  selCam = cam;
+  const img = document.getElementById('cam-live-img');
+  const empty = document.getElementById('cam-live-empty');
+  const content = document.getElementById('cam-live-content');
+  document.getElementById('cam-live-name').textContent = cam.name;
+  document.getElementById('cam-live-stream').textContent = cam.stream_url || 'No stream URL configured';
+
+  if (!cam.stream_url) {
+    img.removeAttribute('src');
+    show('cam-live-empty');
+    hide('cam-live-content');
+    return;
+  }
+
+  const liveUrl = `${API}/cameras/${cam.id}/live?token=${encodeURIComponent(token)}`;
+  img.src = liveUrl;
+  hide('cam-live-empty');
+  show('cam-live-content');
 }
 
 /* POST /cameras — admin only */
@@ -984,12 +1054,13 @@ async function doAddCamera() {
   const loc       = document.getElementById('c-loc').value.trim();
   const lat       = parseFloat(document.getElementById('c-lat').value);
   const lng       = parseFloat(document.getElementById('c-lng').value);
+  const stream_url = document.getElementById('c-stream').value.trim() || null;
   const status    = document.getElementById('c-status').value;
   if (!name||!loc||isNaN(lat)||isNaN(lng)) {
     err.textContent='⚠ All fields required'; err.classList.remove('hidden'); return;
   }
   try {
-    await api('/cameras',{method:'POST',body:JSON.stringify({name,location_name:loc,latitude:lat,longitude:lng,status})});
+    await api('/cameras',{method:'POST',body:JSON.stringify({name,location_name:loc,latitude:lat,longitude:lng,stream_url,status})});
     toast('Camera registered','success');
     closeModal('cam-modal');
     loadCameras();
@@ -1047,7 +1118,7 @@ function renderSessionUsers() {
     tr.innerHTML = `
       <td class="ts-cell">${u.username}${u._current?' <span style="color:var(--cyan);font-size:9px;">(you)</span>':''}</td>
       <td><span class="role-badge ${u.role}">${u.role.toUpperCase()}</span></td>
-      <td><span class="status-badge ${u.is_active?'resolved':'pending'}">${u.is_active?'ACTIVE':'INACTIVE'}</span></td>
+      <td><span class="status-badge ${u.is_active?'resolved':'rejected'}">${u.is_active?'ACTIVE':'INACTIVE'}</span></td>
       <td class="ts-cell">${u.created_at?fmtTs(u.created_at):'—'}</td>`;
     tbody.appendChild(tr);
   });
@@ -1145,7 +1216,7 @@ function onWSMsg(msg) {
   } else if (isUpd) {
     item.innerHTML = `
       <div class="alert-ev">📡 STATUS UPDATE</div>
-      <div class="alert-body">${msg.status?.toUpperCase()}${msg.assigned_unit?' → '+msg.assigned_unit:''}</div>
+      <div class="alert-body">${fmtStatus(msg.status)}${msg.assigned_unit?' → '+msg.assigned_unit:''}</div>
       <div class="alert-t">${new Date().toLocaleTimeString()}  by ${msg.by||'—'}</div>`;
     if (selInc?.id===msg.incident_id) loadDetail(msg.incident_id);
     loadIncidents();
@@ -1166,7 +1237,7 @@ setInterval(()=>{ if(ws&&ws.readyState===WebSocket.OPEN) ws.send('ping'); },3000
    STATS
 ══════════════════════════════════════ */
 function updateStats() {
-  const c={pending:0,verified:0,dispatched:0,resolved:0};
+  const c={pending:0,verified:0,closed:0,dispatched:0,resolved:0};
   incidents.forEach(i=>{ if(c[i.status]!==undefined) c[i.status]++; });
   document.getElementById('s-pending').textContent   = c.pending;
   document.getElementById('s-verified').textContent  = c.verified;
@@ -1184,7 +1255,11 @@ function show(id){ document.getElementById(id)?.classList.remove('hidden'); }
 function hide(id){ document.getElementById(id)?.classList.add('hidden'); }
 
 function fmtType(t){
-  return {accident:'⚡ ACCIDENT',violence:'⚠ VIOLENCE',fallen_person:'🔴 FALLEN'}[t]||(t||'').toUpperCase();
+  return {accident:'⚡ ACCIDENT',violence:'⚠ VIOLENCE',fallen_person:'🔴 FALLEN',fire:'🔥 FIRE'}[t]||(t||'').toUpperCase();
+}
+
+function fmtStatus(s){
+  return {pending:'PENDING VERIFICATION',verified:'VERIFIED',closed:'REJECTED',dispatched:'DISPATCHED',resolved:'RESOLVED'}[s]||(s||'').toUpperCase();
 }
 
 function fmtTs(ts){

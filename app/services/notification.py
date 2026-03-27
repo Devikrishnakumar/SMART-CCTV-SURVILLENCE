@@ -11,6 +11,7 @@ UNIT_MAP = {
     IncidentType.accident: ["ambulance", "police"],
     IncidentType.violence: ["police"],
     IncidentType.fallen_person: ["ambulance"],
+    IncidentType.fire: ["fire", "ambulance", "police"],
 }
 
 
