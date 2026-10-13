@@ -229,7 +229,8 @@ app = FastAPI(title="NovaGuard", docs_url=None, redoc_url=None, lifespan=lifespa
 
 @app.middleware("http")
 async def protect_public_dashboard(request, call_next):
-    if request.url.path == "/health":
+    path = request.url.path
+    if path in {"/", "/health"} or path.startswith("/assets/"):
         return await call_next(request)
 
     username = os.environ.get("NOVAGUARD_ACCESS_USERNAME", "")
