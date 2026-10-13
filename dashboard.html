@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaGuard — AI Surveillance</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ──────────────────────────────────────────
+   ROOT VARIABLES
+────────────────────────────────────────── */
+:root {
+  --bg:       #03070d;
+  --bg2:      #060c14;
+  --panel:    #080e18;
+  --panel2:   #0a1220;
+  --border:   #0e2035;
+  --border2:  #162840;
+  --accent:   #00cfff;
+  --accent2:  #0088cc;
+  --fire:     #ff5500;
+  --accident: #ffbb00;
+  --violence: #ff2244;
+  --weapon:   #bb44ff;
+  --safe:     #00ff88;
+  --warn:     #ffaa00;
+  --text:     #c8dcea;
+  --muted:    #3a5870;
+  --muted2:   #2a4055;
+  --glow:     rgba(0,207,255,0.15);
+  --font-display: 'Orbitron', monospace;
+  --font-mono:    'Share Tech Mono', monospace;
+  --font-ui:      'Inter', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  user-select: none;
+}
+
+/* ──────────────────────────────────────────
+   ANIMATED BACKGROUND GRID
+────────────────────────────────────────── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,207,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,207,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridDrift 20s linear infinite;
+}
+@keyframes gridDrift {
+  0% { transform: translate(0,0); }
+  100% { transform: translate(40px, 40px); }
+}
+
+.bg-vignette {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(3,7,13,0.85) 100%);
+}
+
+/* ──────────────────────────────────────────
+   LAYOUT
+────────────────────────────────────────── */
+.shell {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  height: 100vh; width: 100vw;
+  overflow: hidden;
+}
+
+/* ──────────────────────────────────────────
+   TOP BAR
+────────────────────────────────────────── */
+.topbar {
+  flex-shrink: 0;
+  height: 52px;
+  background: linear-gradient(180deg, #0a1420 0%, #060c14 100%);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.topbar::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+
+.topbar-left {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.logo-mark {
+  position: relative;
+  width: 34px; height: 34px;
+}
+.logo-mark svg { width: 100%; height: 100%; }
+
+.logo-texts { display: flex; flex-direction: column; }
+.logo-name {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 4px;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(0,207,255,0.5);
+}
+.logo-tagline {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 3px;
+  margin-top: 2px;
+}
+
+.topbar-center {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 24px;
+}
+
+.risk-badge {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 16px;
+  border-radius: 2px;
+  border: 1px solid var(--safe);
+  background: rgba(0,255,136,0.06);
+  transition: all 0.4s ease;
+}
+.risk-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--safe);
+  animation: pulse 1.5s infinite;
+  transition: background 0.3s;
+}
+.risk-text {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--safe);
+  transition: color 0.3s;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.7; transform: scale(0.85); }
+}
+
+.topbar-right {
+  display: flex; align-items: center; gap: 20px;
+}
+
+.sys-stat {
+  display: flex; flex-direction: column; align-items: flex-end;
+}
+.sys-stat-val {
+  font-family: var(--font-mono);
+  font-size: 13px; color: var(--accent);
+  line-height: 1;
+}
+.sys-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 1px; margin-top: 1px;
+}
+
+.live-indicator {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--violence);
+  letter-spacing: 2px;
+}
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--violence);
+  animation: pulse 1s infinite;
+}
+
+/* ──────────────────────────────────────────
+   MAIN CONTENT
+────────────────────────────────────────── */
+.main-area {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 310px;
+}
+
+/* ──────────────────────────────────────────
+   LEFT COLUMN
+────────────────────────────────────────── */
+.left-col {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Tabs */
+.tab-bar {
+  flex-shrink: 0;
+  display: flex; align-items: flex-end;
+  padding: 0 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  gap: 2px;
+}
+
+.tab {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--muted);
+  padding: 10px 16px 8px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-content { flex: 1; overflow: hidden; }
+.tab-pane { display: none; height: 100%; }
+.tab-pane.active { display: flex; flex-direction: column; }
+
+/* ──────────────────────────────────────────
+   MONITOR TAB
+────────────────────────────────────────── */
+.monitor-pane {
+  padding: 12px 14px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.cam-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.cam-id-tag {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--accent);
+  letter-spacing: 2px;
+}
+.rec-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255,34,68,0.4);
+  background: rgba(255,34,68,0.07);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--violence);
+  letter-spacing: 2px;
+}
+.rec-pill::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--violence);
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+/* Video wrapper */
+.video-wrap {
+  position: relative;
+  flex-shrink: 0;
+  background: #000;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.video-wrap img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+/* Corner brackets */
+.corner { position: absolute; width: 18px; height: 18px; border-color: var(--accent); border-style: solid; opacity: 0.8; }
+.corner.tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+.corner.tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+.corner.bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+.corner.br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+.scan-sweep {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(to right, transparent, rgba(0,207,255,0.5), transparent);
+  animation: scanSweep 3s linear infinite;
+  pointer-events: none;
+}
+@keyframes scanSweep {
+  0% { top: 0; opacity: 1; }
+  95% { opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.feed-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(3,7,13,0.7));
+  padding: 8px 10px 6px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  pointer-events: none;
+}
+.feed-ts { font-family: var(--font-mono); font-size: 10px; color: rgba(200,220,234,0.7); }
+.feed-res { font-family: var(--font-mono); font-size: 10px; color: rgba(200,220,234,0.4); }
+
+/* Alert flash */
+.alert-flash {
+  position: absolute; inset: 0; pointer-events: none;
+  opacity: 0; border: 3px solid;
+  transition: opacity 0.15s;
+}
+
+/* Detection cards row */
+.det-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.det-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 10px 8px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.det-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.det-card.fire-card::before   { background: var(--fire); }
+.det-card.acc-card::before    { background: var(--accident); }
+.det-card.vio-card::before    { background: var(--violence); }
+.det-card.wep-card::before    { background: var(--weapon); }
+
+.det-card.firing   { border-color: var(--fire);     background: rgba(255,85,0,0.07); }
+.det-card.accide   { border-color: var(--accident); background: rgba(255,187,0,0.07); }
+.det-card.violent  { border-color: var(--violence); background: rgba(255,34,68,0.07); }
+.det-card.weaponf  { border-color: var(--weapon);   background: rgba(187,68,255,0.07); }
+.det-card.firing::before,
+.det-card.accide::before,
+.det-card.violent::before,
+.det-card.weaponf::before { opacity: 1; }
+
+/* Inner glow sweep */
+.det-card.firing::after,
+.det-card.accide::after,
+.det-card.violent::after,
+.det-card.weaponf::after {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  animation: cardShine 2s linear infinite;
+}
+@keyframes cardShine {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+.card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.card-icon {
+  width: 28px; height: 28px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.fire-card .card-icon   { background: rgba(255,85,0,0.15); }
+.acc-card .card-icon    { background: rgba(255,187,0,0.15); }
+.vio-card .card-icon    { background: rgba(255,34,68,0.15); }
+.wep-card .card-icon    { background: rgba(187,68,255,0.15); }
+
+.card-info { flex: 1; min-width: 0; }
+.card-name {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 1px;
+  color: var(--muted); text-transform: uppercase;
+  transition: color 0.3s;
+}
+.det-card.firing  .card-name  { color: var(--fire); }
+.det-card.accide  .card-name  { color: var(--accident); }
+.det-card.violent .card-name  { color: var(--violence); }
+.det-card.weaponf .card-name  { color: var(--weapon); }
+
+.card-status {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 1px; margin-top: 1px;
+  transition: color 0.3s;
+}
+.det-card.firing  .card-status { color: var(--fire); }
+.det-card.accide  .card-status { color: var(--accident); }
+.det-card.violent .card-status { color: var(--violence); }
+.det-card.weaponf .card-status { color: var(--weapon); }
+
+.card-conf-num {
+  font-family: var(--font-mono);
+  font-size: 18px; font-weight: 700;
+  color: var(--muted2);
+  line-height: 1;
+  transition: color 0.3s;
+  margin-bottom: 5px;
+}
+.det-card.firing  .card-conf-num { color: var(--fire); }
+.det-card.accide  .card-conf-num { color: var(--accident); }
+.det-card.violent .card-conf-num { color: var(--violence); }
+.det-card.weaponf .card-conf-num { color: var(--weapon); }
+
+.conf-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; width: 0%; border-radius: 2px; transition: width 0.5s ease; }
+.fire-card .conf-fill   { background: var(--fire); }
+.acc-card  .conf-fill   { background: var(--accident); }
+.vio-card  .conf-fill   { background: var(--violence); }
+.wep-card  .conf-fill   { background: var(--weapon); }
+
+/* ──────────────────────────────────────────
+   STATS TAB
+────────────────────────────────────────── */
+.stats-pane {
+  padding: 16px;
+  overflow-y: auto;
+  gap: 16px;
+}
+.stats-pane::-webkit-scrollbar { width: 4px; }
+.stats-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.stat-box-val {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.stat-box-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--muted);
+  margin-top: 4px; text-transform: uppercase;
+}
+
+.threat-chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px;
+}
+.chart-title {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 12px;
+}
+.threat-bars {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.threat-bar-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.threat-bar-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 1px;
+  color: var(--muted); width: 68px; flex-shrink: 0;
+}
+.threat-bar-track {
+  flex: 1; height: 6px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
+}
+.threat-bar-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 0.7s ease;
+  width: 0%;
+}
+.threat-bar-val {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--text);
+  width: 30px; text-align: right;
+}
+
+/* ──────────────────────────────────────────
+   EVIDENCE TAB
+────────────────────────────────────────── */
+.evidence-pane {
+  padding: 14px;
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 8px;
+}
+.evidence-pane::-webkit-scrollbar { width: 4px; }
+.evidence-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.evidence-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; flex-shrink: 0;
+}
+.ev-title {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase;
+}
+.dl-daily-btn {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 1px;
+  padding: 5px 12px;
+  border: 1px solid var(--accent2);
+  background: rgba(0,136,204,0.08);
+  color: var(--accent);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.dl-daily-btn:hover { background: rgba(0,207,255,0.15); }
+
+.evidence-list {
+  display: flex; flex-direction: column; gap: 6px;
+  flex: 1;
+}
+
+.ev-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color 0.2s;
+}
+.ev-item:hover { border-color: var(--border2); }
+
+.ev-type-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.ev-type-dot.FIRE     { background: var(--fire); }
+.ev-type-dot.ACCIDENT { background: var(--accident); }
+.ev-type-dot.VIOLENCE { background: var(--violence); }
+.ev-type-dot.WEAPON   { background: var(--weapon); }
+
+.ev-info { flex: 1; min-width: 0; }
+.ev-id {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ev-meta {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+  margin-top: 2px;
+}
+
+.ev-dl-btn {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 1px;
+  padding: 4px 10px;
+  border: 1px solid var(--muted2);
+  color: var(--muted);
+  background: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.ev-dl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.no-evidence {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--muted);
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* ──────────────────────────────────────────
+   RIGHT PANEL
+────────────────────────────────────────── */
+.right-panel {
+  display: flex; flex-direction: column;
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+/* Security Score */
+.score-section {
+  flex-shrink: 0;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 3px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--border);
+}
+
+.score-ring-wrap {
+  display: flex; flex-direction: column; align-items: center;
+}
+
+.ring-container {
+  position: relative; width: 120px; height: 120px;
+  margin: 0 auto 10px;
+}
+.ring-container svg {
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+.ring-fg {
+  fill: none;
+  stroke: var(--safe);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 307;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.8s ease, stroke 0.5s;
+}
+
+.ring-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.ring-score {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 900;
+  color: var(--safe);
+  line-height: 1;
+  transition: color 0.5s;
+}
+.ring-of {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 1px; margin-top: 2px;
+}
+
+.score-level {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 3px;
+  padding: 4px 16px;
+  border-radius: 2px;
+  border: 1px solid var(--safe);
+  color: var(--safe);
+  transition: all 0.5s;
+  margin-bottom: 10px;
+}
+
+.risk-bars {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rb-row { display: flex; align-items: center; gap: 8px; }
+.rb-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); width: 56px; flex-shrink: 0; }
+.rb-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.rb-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; width: 0%; }
+.rb-val { font-family: var(--font-mono); font-size: 9px; color: var(--text); width: 26px; text-align: right; }
+
+/* Event Log */
+.log-section {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  padding: 10px 16px;
+  overflow: hidden;
+}
+
+.event-log {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.event-log::-webkit-scrollbar { width: 3px; }
+.event-log::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.log-entry {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 2px;
+  border-left: 2px solid;
+  background: rgba(255,255,255,0.018);
+  animation: logIn 0.3s ease;
+  line-height: 1.4;
+}
+@keyframes logIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: none; }
+}
+.log-time { color: var(--muted); flex-shrink: 0; font-size: 9px; }
+.log-msg { color: var(--text); }
+
+/* ──────────────────────────────────────────
+   BOTTOM BAR
+────────────────────────────────────────── */
+.bottombar {
+  flex-shrink: 0;
+  height: 42px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+}
+
+.bb-label {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 2px; color: var(--muted);
+  flex-shrink: 0;
+}
+
+.bb-divider {
+  width: 1px; height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.action-btn {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 1px;
+  padding: 5px 12px;
+  border-radius: 2px;
+  border: 1px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.action-btn.primary {
+  border-color: var(--accent2);
+  color: var(--accent);
+}
+.action-btn.primary:hover {
+  background: rgba(0,207,255,0.1);
+  border-color: var(--accent);
+}
+.action-btn.secondary {
+  border-color: var(--muted2);
+  color: var(--muted);
+}
+.action-btn.secondary:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+.action-btn.danger {
+  border-color: rgba(255,34,68,0.4);
+  color: var(--violence);
+}
+.action-btn.danger:hover {
+  background: rgba(255,34,68,0.1);
+}
+
+.bb-spacer { flex: 1; }
+
+.fps-display {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--muted);
+}
+.fps-val { color: var(--accent); }
+
+/* ──────────────────────────────────────────
+   TOAST NOTIFICATIONS
+────────────────────────────────────────── */
+.toast-stack {
+  position: fixed;
+  top: 62px; right: 14px;
+  z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 260px; max-width: 320px;
+  background: var(--panel2);
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 10px 14px;
+  pointer-events: auto;
+  animation: toastIn 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+.toast-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.toast-icon { font-size: 14px; }
+.toast-title {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1px;
+  flex: 1;
+}
+.toast-time {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+}
+.toast-body {
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* ──────────────────────────────────────────
+   FULL SCREEN FLASH
+────────────────────────────────────────── */
+.screen-flash {
+  position: fixed; inset: 0; z-index: 9998;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* ──────────────────────────────────────────
+   CRITICAL PULSE BORDER
+────────────────────────────────────────── */
+@keyframes criticalPulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(255,34,68,0.6); }
+  50% { box-shadow: inset 0 0 0 3px rgba(255,34,68,1), 0 0 30px rgba(255,34,68,0.3); }
+}
+.shell.critical-mode { animation: criticalPulse 1s infinite; }
+
+/* ──────────────────────────────────────────
+   SCROLLBAR GLOBAL
+────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* NovaGuard operator UI refresh */
+:root {
+  --bg: #080d14;
+  --bg2: #0c131d;
+  --panel: #101a26;
+  --panel2: #142130;
+  --border: #1e2b3a;
+  --border2: #2b3d50;
+  --accent: #72dfd0;
+  --accent2: #3caeaa;
+  --safe: #64d8a5;
+  --warn: #f3bd69;
+  --text: #e2ebf1;
+  --muted: #8495a5;
+  --muted2: #516274;
+  --glow: rgba(114,223,208,.12);
+  --font-display: 'Inter', sans-serif;
+  --font-mono: 'Inter', sans-serif;
+}
+body { width: 100%; min-width: 320px; height: auto; min-height: 100vh; overflow: auto; user-select: text; background: radial-gradient(ellipse at 18% 0%, #142330 0, var(--bg) 44rem); }
+.bg-grid { opacity: .16; background-size: 48px 48px; }
+.bg-vignette { background: linear-gradient(180deg, rgba(5,10,16,.1), rgba(5,10,16,.68)); }
+.shell { width: min(100%, 1920px); height: 100vh; min-height: 700px; margin: 0 auto; border-left: 1px solid rgba(255,255,255,.035); border-right: 1px solid rgba(255,255,255,.035); background: rgba(8,13,20,.88); }
+.topbar { height: 68px; padding: 0 24px; background: rgba(12,19,29,.92); border-color: var(--border); }
+.topbar::after { opacity: .22; }
+.logo-mark { width: 32px; height: 32px; }
+.logo-name { color: var(--text); font-family: var(--font-ui); font-size: 14px; letter-spacing: 2.4px; text-shadow: none; }
+.logo-tagline { color: var(--muted); font-family: var(--font-ui); font-size: 9px; letter-spacing: 1.2px; }
+.topbar-center { gap: 12px; }
+.risk-badge { padding: 7px 12px; border-radius: 99px; }
+.risk-text { font-family: var(--font-ui); font-size: 10px; letter-spacing: 1px; }
+.topbar-right { gap: 18px; }
+.sys-stat-val { color: var(--text); font-family: var(--font-ui); font-size: 12px; font-weight: 650; }
+.sys-stat-lbl { color: var(--muted); font-family: var(--font-ui); font-size: 8px; letter-spacing: 1px; }
+.live-indicator { color: var(--safe); font-family: var(--font-ui); font-weight: 700; font-size: 9px; letter-spacing: 1px; }
+.live-dot { background: var(--safe); }
+.add-camera-btn, .camera-add-small, .modal-submit {
+  border: 1px solid rgba(114,223,208,.35); border-radius: 8px; background: rgba(114,223,208,.12);
+  color: var(--accent); font: 600 11px var(--font-ui); padding: 9px 13px; cursor: pointer; transition: .18s ease;
+}
+.add-camera-btn:hover, .camera-add-small:hover, .modal-submit:hover { background: rgba(114,223,208,.2); border-color: var(--accent); transform: translateY(-1px); }
+.main-area { grid-template-columns: minmax(0, 1fr) 350px; }
+.left-col { background: rgba(8,13,20,.58); border-color: var(--border); }
+.tab-bar { padding: 0 22px; gap: 8px; background: rgba(12,19,29,.9); border-color: var(--border); }
+.tab { padding: 15px 12px 13px; color: var(--muted); font: 550 11px var(--font-ui); letter-spacing: .35px; text-transform: none; }
+.tab.active { color: var(--accent); border-bottom-width: 2px; }
+.tab-content { min-height: 0; }
+.monitor-pane { padding: 22px 24px; gap: 16px; overflow-y: auto; }
+.cam-id-tag { color: var(--text); font: 650 12px var(--font-ui); letter-spacing: .2px; }
+.rec-pill { border-color: rgba(100,216,165,.24); background: rgba(100,216,165,.08); border-radius: 99px; color: var(--safe); font: 600 9px var(--font-ui); letter-spacing: .8px; }
+.rec-pill::before { background: currentColor; }
+.video-wrap { width: 100%; min-height: 230px; border-color: var(--border2); border-radius: 12px; background: #05090e; }
+.video-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
+.corner { width: 14px; height: 14px; border-color: rgba(114,223,208,.6); }
+.scan-sweep { display: none; }
+.feed-overlay { z-index: 2; padding: 10px 13px; background: linear-gradient(transparent, rgba(2,6,10,.8)); }
+.feed-ts, .feed-res { font: 500 10px var(--font-ui); color: rgba(226,235,241,.72); }
+.alert-flash { z-index: 3; }
+.feed-state { position: absolute; z-index: 1; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px; text-align: center; background: radial-gradient(ellipse, rgba(19,34,46,.9), rgba(4,8,13,.94)); color: var(--text); }
+.feed-state[hidden] { display: none; }
+.feed-state-mark { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--border2); border-radius: 12px; color: var(--accent); font-size: 19px; }
+.feed-state-title { font-size: 13px; font-weight: 650; }
+.feed-state-message { max-width: 360px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.det-cards { gap: 10px; }
+.det-card { padding: 12px; border-color: var(--border); border-radius: 10px; background: rgba(16,26,38,.76); }
+.det-card::before { height: 1px; }
+.card-name { color: var(--text); font: 600 11px var(--font-ui); }
+.card-status { color: var(--muted); font: 600 8px var(--font-ui); letter-spacing: .6px; }
+.card-conf-num { color: var(--text); font: 650 15px var(--font-ui); }
+.conf-track { background: #253444; border-radius: 5px; }
+.conf-fill { border-radius: 5px; }
+.right-panel { overflow-y: auto; background: rgba(12,19,29,.85); border-left: 1px solid var(--border); }
+.score-section { padding: 20px 20px 16px; border-color: var(--border); }
+.section-title { color: var(--muted); font: 650 10px var(--font-ui); letter-spacing: 1px; margin-bottom: 14px; }
+.section-title::after { background: var(--border); }
+.ring-container { width: 106px; height: 106px; margin-bottom: 8px; }
+.ring-bg { stroke: #263747; }
+.ring-score { color: var(--text); font: 700 25px var(--font-ui); }
+.ring-of, .rb-lbl, .rb-val { font: 500 10px var(--font-ui); }
+.score-level { padding: 5px 12px; border-radius: 99px; font: 650 9px var(--font-ui); letter-spacing: 1px; margin-bottom: 14px; }
+.risk-bars { gap: 8px; }
+.rb-track { height: 5px; background: #253444; }
+.camera-section { flex: 0 0 auto; padding: 17px 18px 14px; border-bottom: 1px solid var(--border); }
+.camera-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.camera-section-head .section-title { flex: 1; margin: 0; }
+.camera-add-small { padding: 6px 9px; border-radius: 7px; font-size: 10px; }
+.camera-list { display: flex; flex-direction: column; gap: 7px; }
+.camera-item { display: flex; align-items: center; gap: 9px; padding: 10px; min-width: 0; border: 1px solid var(--border); border-radius: 9px; background: rgba(16,26,38,.72); }
+.camera-item.active { border-color: rgba(114,223,208,.42); background: rgba(114,223,208,.055); }
+.camera-type-icon { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border: 1px solid var(--border2); border-radius: 8px; color: var(--accent); font-size: 13px; }
+.camera-item-info { flex: 1; min-width: 0; }
+.camera-item-name { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; font: 600 10px var(--font-ui); }
+.camera-item-meta { margin-top: 3px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font: 9px var(--font-ui); }
+.camera-item-status { display: flex; align-items: center; gap: 5px; margin-top: 5px; color: var(--muted); font: 600 8px var(--font-ui); letter-spacing: .5px; text-transform: uppercase; }
+.camera-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted2); }
+.camera-status-dot.connected { background: var(--safe); box-shadow: 0 0 8px rgba(100,216,165,.45); }
+.camera-status-dot.connecting, .camera-status-dot.reconnecting { background: var(--warn); }
+.camera-item-actions { display: flex; gap: 4px; }
+.camera-action { border: 0; background: transparent; color: var(--muted); padding: 5px; cursor: pointer; font: 600 9px var(--font-ui); }
+.camera-action:hover { color: var(--accent); }
+.camera-action.remove:hover { color: #ff8089; }
+.camera-empty { border: 1px dashed var(--border2); border-radius: 9px; padding: 15px 10px; text-align: center; color: var(--muted); font-size: 10px; }
+.log-section { flex: 1 0 170px; min-height: 170px; padding: 16px 18px; overflow: auto; }
+.log-entry { border-radius: 6px; border-left-width: 2px; background: rgba(255,255,255,.025); font: 10px/1.45 var(--font-ui); padding: 7px 8px; }
+.log-time { font: 9px var(--font-ui); }
+.bottombar { height: 52px; padding: 0 20px; background: #0b121b; border-color: var(--border); gap: 8px; }
+.bb-label, .fps-display { color: var(--muted); font: 600 9px var(--font-ui); letter-spacing: .6px; }
+.action-btn { border-radius: 7px; font: 550 10px var(--font-ui); letter-spacing: 0; padding: 7px 10px; }
+.action-btn.primary { background: rgba(114,223,208,.1); border-color: rgba(114,223,208,.23); color: var(--accent); }
+.action-btn.secondary { border-color: var(--border2); color: var(--muted); }
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fps-val { color: var(--text); }
+.stats-pane, .evidence-pane { padding: 24px; overflow: auto; }
+.stat-box, .threat-chart-wrap, .ev-item { border-color: var(--border); border-radius: 10px; background: rgba(16,26,38,.76); }
+.stat-box-val { color: var(--text); font: 700 24px var(--font-ui); }
+.stat-box-lbl, .chart-title, .threat-bar-lbl, .threat-bar-val, .ev-title { font: 600 10px var(--font-ui); letter-spacing: .5px; color: var(--muted); }
+.ev-id { font: 600 11px var(--font-ui); }
+.ev-meta, .ev-dl-btn { font: 10px var(--font-ui); }
+.toast { border-radius: 10px; background: #121d28; }
+.critical-mode { animation-duration: 1.7s; }
+.camera-modal { position: fixed; z-index: 10000; inset: 0; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(2,6,10,.78); backdrop-filter: blur(8px); }
+.camera-modal.open { display: flex; }
+.camera-dialog { width: min(100%, 480px); border: 1px solid var(--border2); border-radius: 16px; background: #101a25; box-shadow: 0 24px 80px rgba(0,0,0,.48); overflow: hidden; }
+.camera-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 21px 22px 16px; border-bottom: 1px solid var(--border); }
+.camera-dialog-title { color: var(--text); font-size: 16px; font-weight: 700; }
+.camera-dialog-subtitle { margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.modal-close { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; }
+.camera-form { display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 22px; }
+.camera-field { display: flex; flex-direction: column; gap: 6px; }
+.camera-field label { color: #bdcbd5; font: 600 10px var(--font-ui); }
+.camera-field input, .camera-field select { width: 100%; padding: 10px 11px; border: 1px solid var(--border2); border-radius: 8px; outline: 0; background: #0a1119; color: var(--text); font: 11px var(--font-ui); }
+.camera-field input:focus, .camera-field select:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(114,223,208,.09); }
+.camera-help { color: var(--muted); font-size: 9px; line-height: 1.5; }
+.camera-help code { color: #a9c2ce; font: 9px var(--font-ui); overflow-wrap: anywhere; }
+.camera-form-error { min-height: 14px; color: #ff939b; font-size: 10px; }
+.camera-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.modal-cancel { border: 1px solid var(--border2); border-radius: 8px; background: transparent; color: var(--muted); padding: 9px 13px; cursor: pointer; font: 600 11px var(--font-ui); }
+.modal-submit { min-width: 130px; }
+
+@media (max-width: 1050px) {
+  .main-area { grid-template-columns: minmax(0, 1fr) 310px; }
+  .topbar { padding: 0 16px; }
+  .topbar-right { gap: 11px; }
+  .topbar-right .sys-stat:nth-child(3) { display: none; }
+}
+@media (max-width: 820px) {
+  body { height: auto; }
+  .shell { width: 100%; height: auto; min-height: 100vh; overflow: visible; }
+  .main-area { display: flex; flex-direction: column; }
+  .left-col { min-height: 650px; border-right: 0; }
+  .tab-content { min-height: 540px; }
+  .right-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); overflow: visible; border-left: 0; border-top: 1px solid var(--border); }
+  .score-section { grid-column: 1; grid-row: 1; }
+  .camera-section { grid-column: 2; grid-row: 1; }
+  .log-section { grid-column: 1 / -1; min-height: 220px; }
+  .bottombar { position: sticky; bottom: 0; z-index: 20; overflow-x: auto; }
+}
+@media (max-width: 600px) {
+  .topbar { height: auto; min-height: 66px; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 11px 14px; }
+  .topbar-left { gap: 9px; }
+  .logo-mark { width: 27px; height: 27px; }
+  .logo-name { font-size: 12px; letter-spacing: 1.6px; }
+  .logo-tagline { max-width: 190px; font-size: 7px; letter-spacing: .55px; }
+  .topbar-center { position: static; transform: none; order: 3; }
+  .topbar-right { gap: 10px; }
+  .topbar-right .sys-stat, .topbar-right .live-indicator { display: none; }
+  .add-camera-btn { padding: 8px 10px; font-size: 10px; }
+  .left-col { min-height: 600px; }
+  .tab-content { min-height: 500px; }
+  .tab-bar { padding: 0 12px; }
+  .monitor-pane { padding: 16px 13px; gap: 12px; }
+  .cam-id-tag { font-size: 10px; }
+  .video-wrap { min-height: 190px; }
+  .det-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .right-panel { display: flex; }
+  .score-section { width: 100%; }
+  .camera-section { width: 100%; }
+  .log-section { min-height: 200px; }
+  .bottombar { padding: 0 12px; }
+  .bb-label, .bb-divider, .fps-display { display: none; }
+  .action-btn { white-space: nowrap; }
+  .stats-pane, .evidence-pane { padding: 16px 13px; }
+  .camera-dialog-head, .camera-form { padding-left: 16px; padding-right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-vignette"></div>
+<div class="screen-flash" id="screenFlash"></div>
+
+<div class="shell" id="shell">
+
+  <!-- ── TOP BAR ── -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-mark">
+        <svg viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="17" cy="17" r="15" stroke="#00cfff" stroke-width="1.5"/>
+          <circle cx="17" cy="17" r="9" stroke="#00cfff" stroke-width="1" stroke-dasharray="3 2"/>
+          <circle cx="17" cy="17" r="4" fill="#00cfff" opacity="0.9">
+            <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <line x1="17" y1="2" x2="17" y2="8" stroke="#00cfff" stroke-width="1.5"/>
+          <line x1="17" y1="26" x2="17" y2="32" stroke="#00cfff" stroke-width="1.5"/>
+          <line x1="2" y1="17" x2="8" y2="17" stroke="#00cfff" stroke-width="1.5"/>
+          <line x1="26" y1="17" x2="32" y2="17" stroke="#00cfff" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="logo-texts">
+        <div class="logo-name">NOVAGUARD</div>
+        <div class="logo-tagline">AI SURVEILLANCE · REAL-TIME THREAT DETECTION</div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="risk-badge" id="riskBadge">
+        <div class="risk-dot" id="riskDot"></div>
+        <div class="risk-text" id="riskText">SECURE</div>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="sys-stat">
+        <div class="sys-stat-val" id="topFps">--</div>
+        <div class="sys-stat-lbl">FPS</div>
+      </div>
+      <div class="sys-stat">
+        <div class="sys-stat-val" id="topAlerts">0</div>
+        <div class="sys-stat-lbl">ALERTS</div>
+      </div>
+      <div class="sys-stat">
+        <div class="sys-stat-val" id="topUptime">00:00</div>
+        <div class="sys-stat-lbl">UPTIME</div>
+      </div>
+      <div class="live-indicator" id="globalLive">
+        <div class="live-dot"></div>
+        <span id="globalLiveText">LIVE</span>
+      </div>
+      <button class="add-camera-btn" type="button" onclick="openCameraDialog()">＋ Add camera</button>
+      <div class="sys-stat">
+        <div class="sys-stat-val" id="clockTop">--:--:--</div>
+        <div class="sys-stat-lbl">TIME</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIN AREA ── -->
+  <div class="main-area">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('monitor')">Monitor</div>
+        <div class="tab" onclick="switchTab('stats')">Stats</div>
+        <div class="tab" onclick="switchTab('evidence')">Evidence</div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+
+        <!-- MONITOR -->
+        <div class="tab-pane active monitor-pane" id="tab-monitor">
+
+          <div class="cam-header">
+            <div class="cam-id-tag">CAM-01 // SECTOR-A · MAIN ENTRANCE</div>
+            <div class="rec-pill">● REC</div>
+          </div>
+
+          <div class="video-wrap" id="videoWrap">
+            <div class="feed-state" id="feedState">
+              <div class="feed-state-mark">◉</div>
+              <div class="feed-state-title" id="feedStateTitle">Connecting to camera</div>
+              <div class="feed-state-message" id="feedStateMessage">The stream will appear here as soon as a camera is available.</div>
+            </div>
+            <img id="liveFeed" src="/video_feed" alt="Live Feed">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="scan-sweep"></div>
+            <div class="feed-overlay">
+              <div class="feed-ts" id="feedTimestamp">--</div>
+              <div class="feed-res">1080p · HD</div>
+            </div>
+            <div class="alert-flash" id="alertFlash"></div>
+          </div>
+
+          <!-- Detection Cards -->
+          <div class="det-cards">
+            <!-- Fire -->
+            <div class="det-card fire-card" id="card-fire">
+              <div class="card-top">
+                <div class="card-icon">🔥</div>
+                <div class="card-info">
+                  <div class="card-name">Fire</div>
+                  <div class="card-status" id="status-fire">CLEAR</div>
+                </div>
+              </div>
+              <div class="card-conf-num" id="confnum-fire">0%</div>
+              <div class="conf-track"><div class="conf-fill" id="conf-fire"></div></div>
+            </div>
+            <!-- Accident -->
+            <div class="det-card acc-card" id="card-accident">
+              <div class="card-top">
+                <div class="card-icon">💥</div>
+                <div class="card-info">
+                  <div class="card-name">Accident</div>
+                  <div class="card-status" id="status-accident">CLEAR</div>
+                </div>
+              </div>
+              <div class="card-conf-num" id="confnum-accident">0%</div>
+              <div class="conf-track"><div class="conf-fill" id="conf-accident"></div></div>
+            </div>
+            <!-- Violence -->
+            <div class="det-card vio-card" id="card-violence">
+              <div class="card-top">
+                <div class="card-icon">⚡</div>
+                <div class="card-info">
+                  <div class="card-name">Violence</div>
+                  <div class="card-status" id="status-violence">CLEAR</div>
+                </div>
+              </div>
+              <div class="card-conf-num" id="confnum-violence">0%</div>
+              <div class="conf-track"><div class="conf-fill" id="conf-violence"></div></div>
+            </div>
+            <!-- Weapon -->
+            <div class="det-card wep-card" id="card-weapon">
+              <div class="card-top">
+                <div class="card-icon">⚠️</div>
+                <div class="card-info">
+                  <div class="card-name">Weapon</div>
+                  <div class="card-status" id="status-weapon">CLEAR</div>
+                </div>
+              </div>
+              <div class="card-conf-num" id="confnum-weapon">0%</div>
+              <div class="conf-track"><div class="conf-fill" id="conf-weapon"></div></div>
+            </div>
+          </div>
+
+        </div><!-- /tab-monitor -->
+
+        <!-- STATS -->
+        <div class="tab-pane stats-pane" id="tab-stats">
+
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-fps">--</div>
+              <div class="stat-box-lbl">FPS</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-alerts">0</div>
+              <div class="stat-box-lbl">Total Alerts</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-uptime">--</div>
+              <div class="stat-box-lbl">Uptime</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-score">100</div>
+              <div class="stat-box-lbl">Security Score</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-risk">LOW</div>
+              <div class="stat-box-lbl">Risk Level</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-val" id="stat-cam">LIVE</div>
+              <div class="stat-box-lbl">Camera</div>
+            </div>
+          </div>
+
+          <div class="threat-chart-wrap">
+            <div class="chart-title">Threat Confidence Levels</div>
+            <div class="threat-bars">
+              <div class="threat-bar-row">
+                <div class="threat-bar-lbl">🔥 FIRE</div>
+                <div class="threat-bar-track">
+                  <div class="threat-bar-fill" id="tbar-fire" style="background:var(--fire)"></div>
+                </div>
+                <div class="threat-bar-val" id="tval-fire">0%</div>
+              </div>
+              <div class="threat-bar-row">
+                <div class="threat-bar-lbl">💥 ACCIDENT</div>
+                <div class="threat-bar-track">
+                  <div class="threat-bar-fill" id="tbar-accident" style="background:var(--accident)"></div>
+                </div>
+                <div class="threat-bar-val" id="tval-accident">0%</div>
+              </div>
+              <div class="threat-bar-row">
+                <div class="threat-bar-lbl">⚡ VIOLENCE</div>
+                <div class="threat-bar-track">
+                  <div class="threat-bar-fill" id="tbar-violence" style="background:var(--violence)"></div>
+                </div>
+                <div class="threat-bar-val" id="tval-violence">0%</div>
+              </div>
+              <div class="threat-bar-row">
+                <div class="threat-bar-lbl">⚠️ WEAPON</div>
+                <div class="threat-bar-track">
+                  <div class="threat-bar-fill" id="tbar-weapon" style="background:var(--weapon)"></div>
+                </div>
+                <div class="threat-bar-val" id="tval-weapon">0%</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /tab-stats -->
+
+        <!-- EVIDENCE -->
+        <div class="tab-pane evidence-pane" id="tab-evidence">
+          <div class="evidence-header">
+            <div class="ev-title">Incident Evidence</div>
+            <a class="dl-daily-btn" href="/api/download_daily" download>⬇ Daily Report</a>
+          </div>
+          <div class="evidence-list" id="evidenceList">
+            <div class="no-evidence">No incidents recorded yet.</div>
+          </div>
+        </div><!-- /tab-evidence -->
+
+      </div><!-- /tab-content -->
+    </div><!-- /left-col -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+      <!-- Security Score -->
+      <div class="score-section">
+        <div class="section-title">Security Score</div>
+        <div class="score-ring-wrap">
+          <div class="ring-container">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <circle class="ring-bg" cx="60" cy="60" r="49"/>
+              <circle class="ring-fg" id="scoreRing" cx="60" cy="60" r="49"/>
+            </svg>
+            <div class="ring-inner">
+              <div class="ring-score" id="scoreNum">100</div>
+              <div class="ring-of">/ 100</div>
+            </div>
+          </div>
+          <div class="score-level" id="scoreLevel">SECURE</div>
+          <div class="risk-bars">
+            <div class="rb-row">
+              <div class="rb-lbl">Fire</div>
+              <div class="rb-track"><div class="rb-fill" id="rb-fire" style="background:var(--fire)"></div></div>
+              <div class="rb-val" id="rbv-fire">0%</div>
+            </div>
+            <div class="rb-row">
+              <div class="rb-lbl">Accident</div>
+              <div class="rb-track"><div class="rb-fill" id="rb-accident" style="background:var(--accident)"></div></div>
+              <div class="rb-val" id="rbv-accident">0%</div>
+            </div>
+            <div class="rb-row">
+              <div class="rb-lbl">Violence</div>
+              <div class="rb-track"><div class="rb-fill" id="rb-violence" style="background:var(--violence)"></div></div>
+              <div class="rb-val" id="rbv-violence">0%</div>
+            </div>
+            <div class="rb-row">
+              <div class="rb-lbl">Weapon</div>
+              <div class="rb-track"><div class="rb-fill" id="rb-weapon" style="background:var(--weapon)"></div></div>
+              <div class="rb-val" id="rbv-weapon">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="camera-section">
+        <div class="camera-section-head">
+          <div class="section-title">Camera sources</div>
+          <button class="camera-add-small" type="button" onclick="openCameraDialog()">＋ Add</button>
+        </div>
+        <div class="camera-list" id="cameraList">
+          <div class="camera-empty">Loading camera sources…</div>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="log-section">
+        <div class="section-title">Event Log</div>
+        <div class="event-log" id="eventLog">
+          <div class="log-entry" style="border-color: var(--safe);">
+            <span class="log-time" id="initTime">--:--:--</span>
+            <span class="log-msg">System online. NovaGuard monitoring active.</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+  </div><!-- /main-area -->
+
+  <!-- BOTTOM BAR -->
+  <div class="bottombar">
+    <div class="bb-label">ACTIONS ›</div>
+    <a class="action-btn primary" href="/api/download_latest" download>
+      ⬇ Latest Report
+    </a>
+    <a class="action-btn primary" href="/api/download_daily" download>
+      📋 Daily Report
+    </a>
+    <div class="bb-divider"></div>
+    <button class="action-btn secondary" onclick="refreshEvidence()">
+      🔄 Refresh Evidence
+    </button>
+    <button class="action-btn secondary" onclick="clearLog()">
+      🗑 Clear Log
+    </button>
+    <div class="bb-spacer"></div>
+    <div class="fps-display">FPS <span class="fps-val" id="bbFps">--</span></div>
+  </div>
+
+</div><!-- /shell -->
+
+<div class="camera-modal" id="cameraDialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cameraDialogTitle">
+  <div class="camera-dialog">
+    <div class="camera-dialog-head">
+      <div>
+        <div class="camera-dialog-title" id="cameraDialogTitle">Add a camera</div>
+        <div class="camera-dialog-subtitle">Connect a webcam on this computer or an IP camera/NVR stream.</div>
+      </div>
+      <button class="modal-close" type="button" aria-label="Close" onclick="closeCameraDialog()">×</button>
+    </div>
+    <form class="camera-form" id="cameraForm">
+      <div class="camera-field">
+        <label for="cameraNameInput">Camera name</label>
+        <input id="cameraNameInput" name="name" maxlength="80" placeholder="Front entrance" required>
+      </div>
+      <div class="camera-field">
+        <label for="cameraLocationInput">Location <span style="color:var(--muted);font-weight:400">· optional</span></label>
+        <input id="cameraLocationInput" name="location" maxlength="100" placeholder="Building A · Lobby">
+      </div>
+      <div class="camera-field">
+        <label for="cameraKindInput">Camera type</label>
+        <select id="cameraKindInput" name="kind">
+          <option value="webcam">Webcam connected to this computer</option>
+          <option value="rtsp">IP camera or NVR stream</option>
+        </select>
+      </div>
+      <div class="camera-field" id="cameraSourceField">
+        <label for="cameraSourceInput" id="cameraSourceLabel">Webcam index</label>
+        <input id="cameraSourceInput" name="source" inputmode="numeric" value="0" required>
+        <div class="camera-help" id="cameraSourceHelp">Use 0 for the default webcam. Try 1 or 2 for another camera connected to this computer.</div>
+      </div>
+      <div class="camera-form-error" id="cameraFormError" role="status"></div>
+      <div class="camera-dialog-actions">
+        <button class="modal-cancel" type="button" onclick="closeCameraDialog()">Cancel</button>
+        <button class="modal-submit" id="cameraSubmit" type="submit">Add and connect</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let CAMERAS = [];
+let ACTIVE_CAMERA_ID = null;
+let CURRENT_CAMERA_STATUS = { id: null, status: 'connecting', error: null };
+
+async function cameraRequest(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.detail || 'Camera request failed.');
+  return body;
+}
+
+async function loadCameras() {
+  try {
+    const result = await cameraRequest('/api/cameras');
+    CAMERAS = result.cameras || [];
+    ACTIVE_CAMERA_ID = result.active_id || null;
+    renderCameras();
+  } catch (error) {
+    const list = document.getElementById('cameraList');
+    if (list) list.textContent = 'Could not load camera sources.';
+  }
+}
+
+function renderCameras() {
+  const list = document.getElementById('cameraList');
+  if (!list) return;
+  list.replaceChildren();
+  if (!CAMERAS.length) {
+    const empty = document.createElement('div');
+    empty.className = 'camera-empty';
+    empty.textContent = 'No camera sources added yet.';
+    list.appendChild(empty);
+    return;
+  }
+  CAMERAS.forEach(camera => {
+    const active = camera.id === ACTIVE_CAMERA_ID;
+    const status = active ? CURRENT_CAMERA_STATUS.status : 'standby';
+    const item = document.createElement('div');
+    item.className = `camera-item${active ? ' active' : ''}`;
+    const icon = document.createElement('div');
+    icon.className = 'camera-type-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = camera.kind === 'webcam' ? 'CAM' : 'IP';
+    const info = document.createElement('div');
+    info.className = 'camera-item-info';
+    const name = document.createElement('div');
+    name.className = 'camera-item-name';
+    name.textContent = camera.name;
+    const meta = document.createElement('div');
+    meta.className = 'camera-item-meta';
+    meta.textContent = camera.location || camera.source_label;
+    const statusLine = document.createElement('div');
+    statusLine.className = 'camera-item-status';
+    const dot = document.createElement('span');
+    dot.className = `camera-status-dot ${status}`;
+    const statusText = document.createElement('span');
+    statusText.textContent = status === 'connected' ? 'Live' : status;
+    statusLine.append(dot, statusText);
+    info.append(name, meta, statusLine);
+    const actions = document.createElement('div');
+    actions.className = 'camera-item-actions';
+    if (!active) {
+      const connect = document.createElement('button');
+      connect.type = 'button';
+      connect.className = 'camera-action';
+      connect.textContent = 'View';
+      connect.setAttribute('aria-label', `Connect to ${camera.name}`);
+      connect.addEventListener('click', () => connectCamera(camera.id));
+      actions.appendChild(connect);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'camera-action remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', `Remove ${camera.name}`);
+    remove.title = 'Remove camera';
+    remove.addEventListener('click', () => removeCamera(camera));
+    actions.appendChild(remove);
+    item.append(icon, info, actions);
+    list.appendChild(item);
+  });
+}
+
+function updateCameraStatus(camera) {
+  if (!camera) return;
+  const priorKey = `${CURRENT_CAMERA_STATUS.id}:${CURRENT_CAMERA_STATUS.status}`;
+  const currentKey = `${camera.id}:${camera.status}`;
+  CURRENT_CAMERA_STATUS = camera;
+  ACTIVE_CAMERA_ID = camera.id;
+  const connected = camera.status === 'connected';
+  const badge = document.getElementById('feedStatusBadge') || document.querySelector('.rec-pill');
+  const feedState = document.getElementById('feedState');
+  const title = document.getElementById('feedStateTitle');
+  const message = document.getElementById('feedStateMessage');
+  const name = document.querySelector('.cam-id-tag');
+  const globalText = document.getElementById('globalLiveText');
+  if (name) name.textContent = `${camera.name}${camera.location ? ' · ' + camera.location : ''}`;
+  if (badge) {
+    const labels = { connected: 'LIVE', connecting: 'CONNECTING', reconnecting: 'RECONNECTING', disconnected: 'OFFLINE' };
+    const tones = { connected: '#64d8a5', connecting: '#f3bd69', reconnecting: '#f3bd69', disconnected: '#ff8089' };
+    const tone = tones[camera.status] || '#8495a5';
+    badge.textContent = labels[camera.status] || camera.status.toUpperCase();
+    badge.style.color = tone;
+    badge.style.borderColor = `${tone}55`;
+    badge.style.background = `${tone}12`;
+  }
+  if (feedState) feedState.hidden = connected;
+  if (title) title.textContent = camera.status === 'disconnected' ? 'Camera unavailable' : camera.status === 'reconnecting' ? 'Reconnecting to camera' : 'Connecting to camera';
+  if (message) message.textContent = camera.error || 'The live feed will appear when the camera sends its first frame.';
+  if (globalText) globalText.textContent = connected ? 'LIVE' : camera.status === 'disconnected' ? 'OFFLINE' : 'CONNECTING';
+  const live = document.getElementById('globalLive');
+  if (live) live.style.color = connected ? 'var(--safe)' : camera.status === 'disconnected' ? '#ff8089' : 'var(--warn)';
+  const liveDot = live?.querySelector('.live-dot');
+  if (liveDot) liveDot.style.background = connected ? 'var(--safe)' : camera.status === 'disconnected' ? '#ff8089' : 'var(--warn)';
+  if (priorKey !== currentKey) renderCameras();
+  if (priorKey !== currentKey && CURRENT_CAMERA_STATUS.id && priorKey !== 'null:connecting') {
+    if (camera.status === 'connected') addLog(`${camera.name} is live.`, '#64d8a5');
+    else if (camera.status === 'disconnected') addLog(`${camera.name} is offline. ${camera.error || ''}`, '#ff8089');
+  }
+}
+
+function openCameraDialog() {
+  const dialog = document.getElementById('cameraDialog');
+  dialog.classList.add('open');
+  dialog.setAttribute('aria-hidden', 'false');
+  document.getElementById('cameraFormError').textContent = '';
+  setTimeout(() => document.getElementById('cameraNameInput').focus(), 0);
+}
+
+function closeCameraDialog() {
+  const dialog = document.getElementById('cameraDialog');
+  dialog.classList.remove('open');
+  dialog.setAttribute('aria-hidden', 'true');
+}
+
+function updateCameraSourceField() {
+  const webcam = document.getElementById('cameraKindInput').value === 'webcam';
+  const input = document.getElementById('cameraSourceInput');
+  document.getElementById('cameraSourceLabel').textContent = webcam ? 'Webcam index' : 'Camera stream URL';
+  document.getElementById('cameraSourceHelp').innerHTML = webcam
+    ? 'Use <code>0</code> for the default webcam. Try <code>1</code> or <code>2</code> for another camera connected to this computer.'
+    : 'Paste the RTSP stream URL from your camera or NVR. Example: <code>rtsp://192.168.1.64:554/Streaming/Channels/101</code>. Credentials in the URL are saved locally in <code>cameras.json</code>.';
+  input.type = webcam ? 'number' : 'url';
+  input.inputMode = webcam ? 'numeric' : 'url';
+  input.min = webcam ? '0' : '';
+  input.max = webcam ? '16' : '';
+  input.step = webcam ? '1' : '';
+  input.value = webcam ? '0' : '';
+  input.placeholder = webcam ? '' : 'rtsp://192.168.1.64:554/Streaming/Channels/101';
+}
+
+async function connectCamera(cameraId) {
+  try {
+    await cameraRequest(`/api/cameras/${encodeURIComponent(cameraId)}/connect`, { method: 'POST' });
+    await loadCameras();
+    addLog('Switching active camera source…', 'var(--accent)');
+  } catch (error) {
+    addLog(error.message, '#ff8089');
+  }
+}
+
+async function removeCamera(camera) {
+  if (!window.confirm(`Remove “${camera.name}” from camera sources?`)) return;
+  try {
+    await cameraRequest(`/api/cameras/${encodeURIComponent(camera.id)}`, { method: 'DELETE' });
+    await loadCameras();
+    addLog(`${camera.name} removed from camera sources.`, 'var(--muted)');
+  } catch (error) {
+    addLog(error.message, '#ff8089');
+  }
+}
+
+document.getElementById('cameraKindInput').addEventListener('change', updateCameraSourceField);
+document.getElementById('cameraForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = document.getElementById('cameraSubmit');
+  const errorNode = document.getElementById('cameraFormError');
+  const payload = {
+    name: document.getElementById('cameraNameInput').value.trim(),
+    location: document.getElementById('cameraLocationInput').value.trim(),
+    kind: document.getElementById('cameraKindInput').value,
+    source: document.getElementById('cameraSourceInput').value.trim()
+  };
+  errorNode.textContent = '';
+  submit.disabled = true;
+  submit.textContent = 'Adding…';
+  try {
+    await cameraRequest('/api/cameras', { method: 'POST', body: JSON.stringify(payload) });
+    closeCameraDialog();
+    form.reset();
+    updateCameraSourceField();
+    await loadCameras();
+    addLog(`${payload.name} added. Connecting to the stream…`, 'var(--accent)');
+  } catch (error) {
+    errorNode.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'Add and connect';
+  }
+});
+document.getElementById('cameraDialog').addEventListener('click', event => {
+  if (event.target.id === 'cameraDialog') closeCameraDialog();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeCameraDialog();
+});
+updateCameraSourceField();
+loadCameras();
+</script>
+
+<!-- Toast stack -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* ───────────────────────────────────────────────
+   CLOCK
+─────────────────────────────────────────────── */
+function tick() {
+  const now = new Date();
+  const ts = now.toTimeString().slice(0, 8);
+  document.getElementById('clockTop').textContent = ts;
+  document.getElementById('feedTimestamp').textContent =
+    now.toISOString().slice(0, 10) + ' · ' + ts;
+  document.getElementById('initTime').textContent = ts;
+}
+setInterval(tick, 1000); tick();
+
+/* ───────────────────────────────────────────────
+   UPTIME FORMATTER
+─────────────────────────────────────────────── */
+function formatUptime(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+/* ───────────────────────────────────────────────
+   TAB SWITCHING
+─────────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['monitor','stats','evidence'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'evidence') refreshEvidence();
+}
+
+/* ───────────────────────────────────────────────
+   RISK COLORS
+─────────────────────────────────────────────── */
+const RISK_PALETTE = {
+  LOW:      { color: '#00ff88', label: 'SECURE' },
+  MEDIUM:   { color: '#ffaa00', label: 'MODERATE' },
+  HIGH:     { color: '#ff5500', label: 'HIGH RISK' },
+  CRITICAL: { color: '#ff2244', label: 'CRITICAL' },
+};
+
+const PREV_STATE = { fire: false, violence: false, weapon: false, accident: false };
+
+/* ───────────────────────────────────────────────
+   MAIN POLL
+─────────────────────────────────────────────── */
+async function poll() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    applyStatus(d);
+  } catch(e) {}
+}
+
+function applyStatus(d) {
+  const { risk_level, risk_score, fps, uptime, total_alerts } = d;
+  const { fire, violence, weapon, accident } = d;
+  updateCameraStatus(d.camera);
+
+  // Top bar
+  document.getElementById('topFps').textContent    = fps;
+  document.getElementById('topAlerts').textContent  = total_alerts;
+  document.getElementById('topUptime').textContent  = formatUptime(uptime);
+  document.getElementById('bbFps').textContent       = fps;
+
+  // Stats tab
+  document.getElementById('stat-fps').textContent    = fps;
+  document.getElementById('stat-alerts').textContent = total_alerts;
+  document.getElementById('stat-uptime').textContent = formatUptime(uptime);
+  document.getElementById('stat-score').textContent  = risk_score;
+  document.getElementById('stat-risk').textContent   = risk_level;
+  document.getElementById('stat-cam').textContent    = d.camera?.status === 'connected' ? 'LIVE' : 'OFFLINE';
+
+  // Risk badge
+  const rp = RISK_PALETTE[risk_level] || RISK_PALETTE.LOW;
+  const badge = document.getElementById('riskBadge');
+  const dot   = document.getElementById('riskDot');
+  const txt   = document.getElementById('riskText');
+  badge.style.borderColor = rp.color;
+  badge.style.background  = rp.color + '11';
+  dot.style.background    = rp.color;
+  txt.style.color         = rp.color;
+  txt.textContent         = rp.label;
+
+  // Shell critical mode
+  const shell = document.getElementById('shell');
+  shell.classList.toggle('critical-mode', risk_level === 'CRITICAL');
+
+  // Score ring
+  const scoreEl  = document.getElementById('scoreNum');
+  const ring     = document.getElementById('scoreRing');
+  const levelEl  = document.getElementById('scoreLevel');
+  const circumf  = 307.9;
+  const offset   = circumf * (1 - risk_score / 100);
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke           = rp.color;
+  scoreEl.textContent         = risk_score;
+  scoreEl.style.color         = rp.color;
+  levelEl.textContent         = rp.label;
+  levelEl.style.borderColor   = rp.color;
+  levelEl.style.color         = rp.color;
+
+  // Cards
+  updateCard('fire',     fire);
+  updateCard('accident', accident);
+  updateCard('violence', violence);
+  updateCard('weapon',   weapon);
+
+  // Check for new detections → toast + flash
+  checkNewDetections(d);
+}
+
+function updateCard(type, data) {
+  const classMap = { fire:'firing', accident:'accide', violence:'violent', weapon:'weaponf' };
+  const card = document.getElementById('card-' + type);
+  const cls  = classMap[type];
+
+  if (data.detected) {
+    card.classList.add(cls);
+  } else {
+    card.classList.remove(cls);
+  }
+
+  document.getElementById('status-' + type).textContent   = data.detected ? 'DETECTED' : 'CLEAR';
+  document.getElementById('confnum-' + type).textContent  = data.confidence + '%';
+  document.getElementById('conf-' + type).style.width     = data.confidence + '%';
+
+  // Right panel breakdown
+  const rbFill = document.getElementById('rb-' + type);
+  const rbVal  = document.getElementById('rbv-' + type);
+  if (rbFill) { rbFill.style.width = data.confidence + '%'; }
+  if (rbVal)  { rbVal.textContent  = data.confidence + '%'; }
+
+  // Stats chart bars
+  const tbar = document.getElementById('tbar-' + type);
+  const tval = document.getElementById('tval-' + type);
+  if (tbar) tbar.style.width = data.confidence + '%';
+  if (tval) tval.textContent = data.confidence + '%';
+}
+
+/* ───────────────────────────────────────────────
+   NEW DETECTION → TOAST + FLASH + LOG
+─────────────────────────────────────────────── */
+const TYPE_META = {
+  fire:     { icon: '🔥', color: '#ff5500', msg: 'Fire detected — Alert sent to Fire Service' },
+  accident: { icon: '💥', color: '#ffbb00', msg: 'Accident detected — Alert sent to Ambulance' },
+  violence: { icon: '⚡', color: '#ff2244', msg: 'Violence detected — Alert sent to Police' },
+  weapon:   { icon: '⚠️', color: '#bb44ff', msg: 'Weapon identified — Priority alert sent to Police' },
+};
+
+function checkNewDetections(d) {
+  ['fire','accident','violence','weapon'].forEach(type => {
+    const cur  = d[type].detected;
+    const prev = PREV_STATE[type];
+    if (cur && !prev) {
+      // New detection
+      const meta = TYPE_META[type];
+      showToast(type, d[type].confidence);
+      flashScreen(meta.color);
+      addLog(meta.icon + ' ' + meta.msg + ' · ' + d[type].confidence + '%', meta.color);
+    }
+    if (!cur && prev) {
+      addLog('✅ ' + type.toUpperCase() + ' threat cleared.', '#00ff88');
+    }
+    PREV_STATE[type] = cur;
+  });
+}
+
+/* ───────────────────────────────────────────────
+   TOAST
+─────────────────────────────────────────────── */
+function showToast(type, conf) {
+  const meta = TYPE_META[type];
+  const stack = document.getElementById('toastStack');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.style.borderColor = meta.color;
+  toast.style.boxShadow = `0 0 20px ${meta.color}33`;
+
+  const now = new Date().toTimeString().slice(0, 8);
+  toast.innerHTML = `
+    <div class="toast-header">
+      <span class="toast-icon">${meta.icon}</span>
+      <span class="toast-title" style="color:${meta.color}">${type.toUpperCase()} DETECTED</span>
+      <span class="toast-time">${now}</span>
+    </div>
+    <div class="toast-body">Confidence: ${conf}% · ${meta.msg.split('·')[1]?.trim() || ''}</div>
+  `;
+  stack.prepend(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => toast.remove(), 310);
+  }, 5000);
+}
+
+/* ───────────────────────────────────────────────
+   SCREEN FLASH
+─────────────────────────────────────────────── */
+function flashScreen(color) {
+  const el = document.getElementById('screenFlash');
+  el.style.background = color;
+  el.style.opacity = '0.12';
+  setTimeout(() => { el.style.opacity = '0'; }, 200);
+}
+
+/* ───────────────────────────────────────────────
+   EVENT LOG
+─────────────────────────────────────────────── */
+function addLog(msg, color) {
+  const log = document.getElementById('eventLog');
+  const now = new Date().toTimeString().slice(0, 8);
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.style.borderColor = color;
+  const time = document.createElement('span');
+  time.className = 'log-time';
+  time.textContent = now;
+  const message = document.createElement('span');
+  message.className = 'log-msg';
+  message.textContent = msg;
+  entry.append(time, message);
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+function clearLog() {
+  const log = document.getElementById('eventLog');
+  log.replaceChildren();
+  addLog('Log cleared by operator.', 'var(--muted)');
+}
+
+/* ───────────────────────────────────────────────
+   EVIDENCE LIST
+─────────────────────────────────────────────── */
+async function refreshEvidence() {
+  try {
+    const r = await fetch('/api/incidents');
+    const incidents = await r.json();
+    const list = document.getElementById('evidenceList');
+
+    if (!incidents || incidents.length === 0) {
+      list.innerHTML = '<div class="no-evidence">No incidents recorded yet.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    incidents.forEach(inc => {
+      const item = document.createElement('div');
+      item.className = 'ev-item';
+      const dtype = (inc.type || '').toUpperCase();
+      const conf  = (inc.confidence * 100).toFixed(0);
+      const ts    = inc.timestamp || '--';
+      item.innerHTML = `
+        <div class="ev-type-dot ${dtype}"></div>
+        <div class="ev-info">
+          <div class="ev-id">${inc.incident_id || '--'}</div>
+          <div class="ev-meta">${dtype} · ${conf}% · ${ts}</div>
+        </div>
+        ${inc.has_pdf
+          ? `<a class="ev-dl-btn" href="/api/download_incident/${inc.incident_id}" download>⬇ PDF</a>`
+          : '<span class="ev-dl-btn" style="opacity:0.3;cursor:default;">No PDF</span>'
+        }
+      `;
+      list.appendChild(item);
+    });
+  } catch(e) {
+    document.getElementById('evidenceList').innerHTML =
+      '<div class="no-evidence">Failed to load evidence.</div>';
+  }
+}
+
+/* ───────────────────────────────────────────────
+   START POLLING
+─────────────────────────────────────────────── */
+setInterval(poll, 500);
+poll();
+refreshEvidence();
+setInterval(refreshEvidence, 10000);
+</script>
+</body>
+</html>

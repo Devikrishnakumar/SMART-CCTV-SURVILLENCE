@@ -1,203 +1,59 @@
-# 🚨 Emergency Detection & Dispatch API
+# NovaGuard
 
-Production-ready FastAPI backend for AI-powered emergency detection and dispatch.
+NovaGuard is a local camera monitoring dashboard with live threat detection, incident evidence, and camera source switching.
 
-## Architecture
+## Run the full project in development
 
-```
-YOLO Vision Module  →  POST /ai/report
-                              ↓
-                     Confidence Check (≥0.65)
-                              ↓
-                     Store Incident (PostgreSQL)
-                              ↓
-              ┌───────────────┴────────────────┐
-              ↓                                ↓
-     WebSocket Broadcast              Notify Emergency Services
-     (/ws/alerts)                     (Ambulance / Police)
+Use two terminals. In the first, start the FastAPI detection service with the project's Python dependencies installed:
+
+```powershell
+python dashboard.py
 ```
 
-## Quick Start
+In the second terminal, start the React landing page:
 
-```bash
-# 1. Copy env file
-cp .env.example .env
-# Edit .env: set SECRET_KEY, ADMIN_PASSWORD, etc.
-
-# 2. Start everything
-docker-compose up --build
-
-# 3. Run migrations (first time)
-docker-compose run --rm migrate
-
-# API docs available at:
-open http://localhost:8000/docs
+```powershell
+cd designpro
+npm.cmd ci
+npm.cmd run dev
 ```
 
-## Default Admin Credentials
-- Username: `admin`
-- Password: `Admin@12345!`
-- ⚠️ Change immediately via `/auth/users` (admin only)
+Vite serves the adapted `index (3).html` design from `designpro/index.html`, so opening the Vite URL shows that landing page directly.
 
----
+Open the Vite URL shown in the terminal, usually [http://127.0.0.1:5173](http://127.0.0.1:5173). Its **Open dashboard** button connects to the FastAPI service at [http://127.0.0.1:5000/dashboard](http://127.0.0.1:5000/dashboard). The server binds to the local computer by default. Set `NOVAGUARD_HOST` only when you intentionally need another interface.
 
-## API Reference
+For a single-server local deployment, build the landing page first and then start FastAPI:
 
-### Authentication
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/auth/login` | None | Get JWT token |
-| POST | `/auth/users` | Admin | Create user |
-| GET  | `/auth/me` | Any | Current user info |
-
-**Login example:**
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "Admin@12345!"}'
+```powershell
+cd designpro
+npm.cmd ci
+npm.cmd run build
+cd ..
+python dashboard.py
 ```
 
-### Cameras
+The built landing page is served at `/`; when no build exists, FastAPI serves `index (3).html` directly. The monitor dashboard remains at `/dashboard`.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/cameras` | Operator+ | List cameras |
-| GET | `/cameras/{id}` | Operator+ | Get camera |
-| POST | `/cameras` | Admin | Create camera |
+## Connect a webcam
 
-### Incidents
+Choose **Add camera**, select **Webcam connected to this computer**, enter a name, and use index `0` for the default webcam. If that device is unavailable, try `1` or `2`. The webcam must be connected to the computer running the Python server.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/incidents` | Operator+ | Create incident |
-| GET | `/incidents` | Operator+ | List (filterable) |
-| GET | `/incidents/{id}` | Operator+ | Get incident |
-| PUT | `/incidents/{id}/verify` | Operator+ | Verify incident |
-| PUT | `/incidents/{id}/dispatch` | Dispatcher+ | Dispatch unit |
-| PUT | `/incidents/{id}/resolve` | Dispatcher+ | Resolve incident |
+## Connect an IP camera or NVR
 
-**Query params for GET /incidents:**
-- `status`: pending | verified | dispatched | resolved | closed
-- `camera_id`: UUID
-- `limit`: 1-200 (default 50)
-- `offset`: pagination offset
+Enable RTSP on the camera/NVR and add its stream URL from **Add camera → IP camera or NVR stream**. A common Hikvision main-stream pattern is:
 
-### AI Integration
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/ai/report` | None* | Report AI detection |
-
-*Secure in production with `X-AI-Module-Key` header (see routes/ai.py)
-
-**Request body:**
-```json
-{
-  "type": "accident",
-  "confidence": 0.87,
-  "camera_id": "uuid-here",
-  "snapshot_url": "https://storage/snap.jpg",
-  "video_clip_url": "https://storage/clip.mp4"
-}
+```text
+rtsp://CAMERA_IP:554/Streaming/Channels/101
 ```
 
-### WebSocket
+Camera URL paths vary by manufacturer and recorder. Use the exact RTSP URL from the camera/NVR documentation. For an authenticated stream, include the camera username and password in the URL. NovaGuard accepts RTSP, RTSPS, HTTP, and HTTPS video stream URLs through OpenCV/FFmpeg.
 
-Connect: `ws://localhost:8000/ws/alerts?token=<jwt>`
+Camera profiles and their stream URLs are saved in `cameras.json` beside the app. That file is ignored by Git because it can contain camera credentials. The dashboard keeps profiles for multiple cameras but processes one selected live feed at a time. If a stream drops, NovaGuard retries the active source and reports its connection state in the dashboard.
 
-**Events received:**
-```json
-// New incident
-{"event": "new_incident", "incident_id": "...", "type": "accident", "confidence": 0.87, ...}
+Email alerts are optional. Configure `NOVAGUARD_EMAIL_SENDER`, `NOVAGUARD_EMAIL_PASSWORD`, and the recipient variables `NOVAGUARD_FIRE_EMAIL`, `NOVAGUARD_ACCIDENT_EMAIL`, `NOVAGUARD_VIOLENCE_EMAIL`, and `NOVAGUARD_WEAPON_EMAIL` in the environment. Use an app password, not an account password. Without these values, the dashboard continues to record incidents but does not send email.
 
-// Status update
-{"event": "incident_updated", "incident_id": "...", "status": "dispatched", "by": "dispatcher1"}
-```
+Use a dedicated read-only camera account where supported. On Render, set `NOVAGUARD_ACCESS_USERNAME` and `NOVAGUARD_ACCESS_PASSWORD` to enable HTTP Basic Authentication; the service refuses dashboard requests if it detects Render without configured credentials. Keep the app behind HTTPS and do not expose camera streams directly to the public internet.
 
----
+## Render deployment
 
-## Alert Logic
-
-| Incident Type | Services Notified |
-|--------------|-------------------|
-| `accident` | Ambulance + Police |
-| `violence` | Police |
-| `fallen_person` | Ambulance |
-
----
-
-## Role Permissions
-
-| Endpoint | Operator | Dispatcher | Admin |
-|----------|----------|------------|-------|
-| View incidents/cameras | ✅ | ✅ | ✅ |
-| Verify incident | ✅ | ✅ | ✅ |
-| Dispatch incident | ❌ | ✅ | ✅ |
-| Resolve incident | ❌ | ✅ | ✅ |
-| Create cameras | ❌ | ❌ | ✅ |
-| Create users | ❌ | ❌ | ✅ |
-
----
-
-## Project Structure
-
-```
-app/
-├── main.py              # FastAPI app + lifespan
-├── config.py            # Settings (pydantic-settings)
-├── database.py          # Async SQLAlchemy engine
-├── models.py            # SQLAlchemy ORM models
-├── schemas.py           # Pydantic request/response models
-├── auth/
-│   ├── security.py      # JWT + bcrypt
-│   └── dependencies.py  # OAuth2 dependency + RBAC
-├── routes/
-│   ├── auth.py          # /auth/*
-│   ├── cameras.py       # /cameras/*
-│   ├── incidents.py     # /incidents/*
-│   ├── ai.py            # /ai/report
-│   └── websocket.py     # /ws/alerts
-├── services/
-│   ├── incident.py      # Business logic
-│   └── notification.py  # Mock emergency dispatch
-├── websocket/
-│   └── manager.py       # ConnectionManager
-└── utils/
-    └── seed.py          # Admin seeder
-alembic/                 # DB migrations
-docker-compose.yml
-Dockerfile
-requirements.txt
-```
-
-## Running in Development
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Start PostgreSQL
-docker-compose up db -d
-
-# Copy and configure .env
-cp .env.example .env
-
-# Run migrations
-alembic upgrade head
-
-# Start API with hot reload
-uvicorn app.main:app --reload --port 8000
-```
-
-## Production Notes
-
-1. Set a strong `SECRET_KEY` (≥32 random chars)
-2. Change default admin password immediately
-3. Enable `X-AI-Module-Key` auth in `/ai/report`
-4. Use HTTPS + reverse proxy (nginx/traefik)
-5. Replace mock notification service with real CAD integration
-6. Add rate limiting (e.g., `slowapi`)
-7. Configure centralized logging (Sentry, Datadog, etc.)
-8. Set `workers` in uvicorn to `2 * CPU_CORES + 1`
+The repository Dockerfile listens on Render's `PORT` and exposes `/health` for health checks. Configure `NOVAGUARD_ACCESS_USERNAME` and `NOVAGUARD_ACCESS_PASSWORD` as Render environment variables before opening the public URL. The service needs CPU and memory for the YOLO and SlowFast models, and it can only process a camera stream reachable from Render; a webcam plugged into your personal computer is not available to the hosted service. Render's filesystem is ephemeral, so evidence and camera profiles are not durable across restarts without a persistent disk.
