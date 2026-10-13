@@ -1703,6 +1703,25 @@ async function poll() {
   try {
     const r = await fetch('/api/status');
     const d = await r.json();
+    if (!r.ok) {
+      const inferenceDisabled = d.error === 'AI inference is disabled on this service.';
+      const feedState = document.getElementById('feedState');
+      const title = document.getElementById('feedStateTitle');
+      const message = document.getElementById('feedStateMessage');
+      if (feedState) feedState.hidden = false;
+      if (title) title.textContent = inferenceDisabled ? 'Live detection is disabled' : 'Camera service unavailable';
+      if (message) message.textContent = inferenceDisabled
+        ? 'This Render plan cannot load the vision models. Run NovaGuard locally or use a larger instance to view live footage.'
+        : d.error || 'The camera service did not respond. Try again shortly.';
+      const badge = document.querySelector('.rec-pill');
+      if (badge) {
+        badge.textContent = inferenceDisabled ? 'DETECTION OFF' : 'OFFLINE';
+        badge.style.color = '#ff8089';
+        badge.style.borderColor = '#ff808955';
+        badge.style.background = '#ff808912';
+      }
+      return;
+    }
     applyStatus(d);
   } catch(e) {}
 }
