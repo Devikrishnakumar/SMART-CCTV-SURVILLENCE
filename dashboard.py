@@ -28,7 +28,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import uvicorn
 
-import detection_engine
+INFERENCE_ENABLED = os.environ.get(
+    "NOVAGUARD_ENABLE_INFERENCE",
+    "false" if os.environ.get("RENDER") else "true",
+).strip().lower() in {"1", "true", "yes", "on"}
+
+if INFERENCE_ENABLED:
+    import detection_engine
+else:
+    detection_engine = None
+
 import features
 
 # ─────────────────────────────────────────
@@ -198,6 +207,12 @@ async def lifespan(application: FastAPI):
     global state
     features.init()
     _load_cameras()
+    if not INFERENCE_ENABLED:
+        state = None
+        print("AI inference disabled; running dashboard-only mode")
+        yield
+        return
+
     camera = _find_camera(active_camera_id) or dict(DEFAULT_CAMERA)
     state = detection_engine.start(
         source=camera["source"], camera_id=camera["id"],
@@ -260,7 +275,7 @@ if os.path.isdir(landing_assets):
 
 @app.get("/health")
 async def health():
-    return JSONResponse({"status": "ok"})
+    return JSONResponse({"status": "ok", "inference_enabled": INFERENCE_ENABLED})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -311,7 +326,8 @@ async def video_feed():
 @app.get("/api/status")
 async def api_status():
     if state is None:
-        return JSONResponse({"error": "starting up"}, status_code=503)
+        message = "AI inference is disabled on this service." if not INFERENCE_ENABLED else "starting up"
+        return JSONResponse({"error": message}, status_code=503)
     with state.lock:
         uptime_secs = int(time.time() - state.uptime_start)
         return JSONResponse({
